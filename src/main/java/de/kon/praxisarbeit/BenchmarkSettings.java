@@ -24,27 +24,6 @@ public class BenchmarkSettings {
         //measureHashWithCPULoad(() ->
     }
 
-    @Deprecated
-    private static HashResult measureHashWithCPULoad(Callable<HashResult> task) {
-        MemoryMonitor memoryMonitor = new MemoryMonitor();
-        Thread cpuMonitorThread = new Thread(memoryMonitor);
-        cpuMonitorThread.start();
-        long start = System.nanoTime();
-        HashResult result;
-        try {
-            result = task.call();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        long end = System.nanoTime();
-        memoryMonitor.stop();
-        double durationMs = (end - start) / 1_000_000.0;
-        double avgCpuLoad = memoryMonitor.getPeakMB();
-        try {
-            result.setExecutionTimeMs((long) durationMs);
-            result.setCpuLoad((long)avgCpuLoad);
-        } catch (Exception ignored) {
-        }
-        return result;
-    }
+  
 }
+
