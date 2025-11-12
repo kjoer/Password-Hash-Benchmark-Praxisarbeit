@@ -28,31 +28,7 @@ public class PasswordHashBenchmark {
                 "rno!gfldih4iuohdl//\"",
                 "ghu7823gd87g387g78782"
         );
-
-        List<Hasher> hashers = Arrays.asList(
-                new BCryptHasher(),
-                new SCryptHasher(),
-                new Argon2Hasher()
-        );
-
         List<HashResult> allResults = new ArrayList<>();
-
-        // Schnelle Tests mit Standard-Einstellungen (ohne JMH für Übersicht)
-        System.out.println("=== Schnelltest mit Standard-Einstellungen (ohne JMH) ===\n");
-        for (String password : passwords) {
-            System.out.println("Teste Passwort: " + password + " mit Standard-Einstellungen");
-            for (Hasher hasher : hashers) {
-                System.out.print("  " + hasher.getAlgorithmName() + "... ");
-                long start = System.currentTimeMillis();
-                HashResult result = hasher.hash(password);
-                long end = System.currentTimeMillis();
-                result.setExecutionTimeMs(end - start);
-                allResults.add(result);
-                System.out.println(result);
-            }
-            System.out.println();
-        }
-
         // JMH Benchmarks mit verschiedenen Einstellungen
         System.out.println("\n=== Präzise JMH-Benchmarks (dauert länger) ===\n");
         BenchmarkSettings benchmarkSettings = new BenchmarkSettings();
@@ -74,6 +50,9 @@ public class PasswordHashBenchmark {
 
             allResults.add(benchmarkSettings.hashBcrypt(bcryptHasher, password, 12));
             System.out.println("  [" + (++bcryptCount) + "/35] BCrypt cost=12 abgeschlossen");
+
+            allResults.add(benchmarkSettings.hashBcrypt(bcryptHasher, password, 13));
+            System.out.println("  [" + (++bcryptCount) + "/35] BCrypt cost=13 abgeschlossen");
 
             allResults.add(benchmarkSettings.hashBcrypt(bcryptHasher, password, 14));
             System.out.println("  [" + (++bcryptCount) + "/35] BCrypt cost=14 abgeschlossen");
@@ -106,69 +85,58 @@ public class PasswordHashBenchmark {
         }
 
         // Argon2 Tests
-        System.out.println("\nArgon2 Benchmarks:");
+        System.out.println("\n=== Argon2 Benchmarks ===");
         int argon2Count = 0;
         for (String password : passwords) {
-            System.out.println("Teste Passwort: " + password + " mit empfohlenen Argon2-Einstellungen");
             Argon2Hasher argon2Hasher = new Argon2Hasher();
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 1, 62500, 2));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=1,m=62500,p=2 abgeschlossen");
+            //Standard laut Paper / OWASP
+            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 65536, 2));
+            System.out.println("  [" + (++argon2Count) + "] Argon2 i=2,m=64MB,p=2 abgeschlossen (Standard)");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 62500, 2));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=2,m=62500,p=2 abgeschlossen");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 3, 62500, 2));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=3,m=62500,p=2 abgeschlossen");
+            //Empfohlen für aktuelle Hardware (moderate Sicherheit)
+            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 3, 131072, 2));
+            System.out.println("  [" + (++argon2Count) + "] Argon2 i=3,m=128MB,p=2 abgeschlossen (Empfohlen)");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 1, 62500, 3));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=1,m=62500,p=3 abgeschlossen");
+            //Mehr Parallelität für Multi-Core Systeme
+            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 3, 131072, 4));
+            System.out.println("  [" + (++argon2Count) + "] Argon2 i=3,m=128MB,p=4 abgeschlossen (Mehr Threads)");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 1, 62500, 4));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=1,m=62500,p=4 abgeschlossen");
+            //Hohe Sicherheit: Hohe Iterationen, viel Speicher
+            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 4, 262144, 4));
+            System.out.println("  [" + (++argon2Count) + "] Argon2 i=4,m=256MB,p=4 abgeschlossen (Hoch sicher)");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 62500, 4));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=2,m=62500,p=4 abgeschlossen");
+            //Extrem sicher: maximale Parameter für moderne Server
+            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 6, 524288, 4));
+            System.out.println("  [" + (++argon2Count) + "] Argon2 i=6,m=512MB,p=4 abgeschlossen (Extrem sicher, sehr ressourcenintensiv)");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 3, 62500, 4));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=3,m=62500,p=4 abgeschlossen");
+            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 1, 2097152 , 4));
+            System.out.println("  [" + (++argon2Count) + "] Argon2 i=1,m=2.000MB,p=4 abgeschlossen (RFC9106) empfohlen");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 62500, 3));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=2,m=62500,p=3 abgeschlossen");
+            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 3, 65536, 4));
+            System.out.println("  [" + (++argon2Count) + "] Argon2 i=3,m=64MB,p=4 abgeschlossen (RFC9106) zweite empfohlene Option");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 62500, 4));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=2,m=62500,p=4 (Duplikat 1) abgeschlossen");
+            //Optional: minimal konfiguriert für Vergleich / Legacy
+            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 1, 32768, 1));
+            System.out.println("  [" + (++argon2Count) + "] Argon2 i=1,m=32MB,p=1 abgeschlossen (Minimal, Legacy)");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 62500, 4));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=2,m=62500,p=4 (Duplikat 2) abgeschlossen");
 
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 125000, 4));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=2,m=125000,p=4 abgeschlossen");
-
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 250000, 4));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=2,m=250000,p=4 abgeschlossen");
-
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 500000, 4));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=2,m=500000,p=4 abgeschlossen");
-
-            allResults.add(benchmarkSettings.hashArgon2(argon2Hasher, password, 2, 1000000, 4));
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=2,m=1000000,p=4 abgeschlossen");
-
-            // Ohne JMH (zu schnell/zu langsam für sinnvolle JMH-Messung)
-            HashResult r1 = argon2Hasher.hash(password, 1, 1000, 2);
-            r1.setExecutionTimeMs(1); // Placeholder
-            allResults.add(r1);
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=1,m=1000,p=2 (ohne JMH) abgeschlossen");
-
-            HashResult r2 = argon2Hasher.hash(password, 3, 1000000, 2);
-            r2.setExecutionTimeMs(1); // Placeholder
-            allResults.add(r2);
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=3,m=1000000,p=2 (ohne JMH) abgeschlossen");
-
-            HashResult r3 = argon2Hasher.hash(password, 32, 1000000, 4);
-            r3.setExecutionTimeMs(1); // Placeholder
-            allResults.add(r3);
-            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=32,m=1000000,p=4 (ohne JMH) abgeschlossen");
+//            // Ohne JMH (zu schnell/zu langsam für sinnvolle JMH-Messung)
+//            HashResult r1 = argon2Hasher.hash(password, 1, 1000, 2);
+//            r1.setExecutionTimeMs(1); // Placeholder
+//            allResults.add(r1);
+//            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=1,m=1000,p=2 (ohne JMH) abgeschlossen");
+//
+//            HashResult r2 = argon2Hasher.hash(password, 3, 1000000, 2);
+//            r2.setExecutionTimeMs(1); // Placeholder
+//            allResults.add(r2);
+//            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=3,m=1000000,p=2 (ohne JMH) abgeschlossen");
+//
+//            HashResult r3 = argon2Hasher.hash(password, 32, 1000000, 4);
+//            r3.setExecutionTimeMs(1); // Placeholder
+//            allResults.add(r3);
+//            System.out.println("  [" + (++argon2Count) + "/119] Argon2 i=32,m=1000000,p=4 (ohne JMH) abgeschlossen");
         }
 
         // Excel Export
