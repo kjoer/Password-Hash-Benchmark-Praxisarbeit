@@ -1,6 +1,7 @@
 package de.kon.praxisarbeit;
 
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.*;
 public class PasswordHashBenchmark {
     public static void main(String[] args) {
         System.out.println("=== Password Hash Benchmark ===\n");
-
+        System.out.println(LocalDateTime.now());
         SysInfo sysInfo = SystemInfoReader.readSystemInfo();
         System.out.println("Systeminformationen:");
         System.out.println(sysInfo);
